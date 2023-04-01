@@ -7,8 +7,8 @@ type PackageManagerOutput = {
     stderr: string
 }
 
-type PnpmCoreCommand = 'add' | 'init'
-type PnpmDependencyCommand = 'webpack'
+type PnpmCoreCommand = 'add' | 'init' | 'install'
+type PnpmDependencyCommand = 'webpack'  | 'tsc index.ts'
 type PnpmCommand = PnpmCoreCommand | PnpmDependencyCommand
 
 export type PackageManagerDependencies = Record<string, string>
@@ -44,6 +44,10 @@ export const packageManager = {
             .map(([name, version]) => `${name}@${version}`)
 
         return await executePnpm(directory, 'add', ...dependencyArgs, ...options)
+    },
+
+    async installProject(directory: string): Promise<PackageManagerOutput> {
+        return await executePnpm(directory, 'install')
     },
 
     async initProject(directory: string): Promise<PackageManagerOutput> {

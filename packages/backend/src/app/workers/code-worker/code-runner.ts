@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises'
 import { CodeExecutionResult, CodeRunStatus } from '@activepieces/shared'
 import { sandboxManager } from '../sandbox'
-import { codeBuilder } from './code-builder'
+import decompress from 'decompress'
 import { system } from '../../helper/system/system'
 import { SystemProp } from '../../helper/system/system-prop'
 import { logger } from '../../helper/logger'
+import { packageManager, PackageManagerDependencies } from '../../helper/package-manager'
 
 const nodeExecutablePath = system.getOrThrow(SystemProp.NODE_EXECUTABLE_PATH)
 
@@ -36,10 +37,16 @@ async function run(artifact: Buffer, input: unknown): Promise<CodeExecutionResul
 
         await sandbox.cleanAndInit()
 
-        const bundledCode = await codeBuilder.build(artifact)
         const codeExecutor = await fs.readFile('packages/backend/src/assets/code-executor.js')
 
-        await fs.writeFile(`${buildPath}/index.js`, bundledCode)
+        logger.info('Installing dependencies at ' + buildPath)
+        const dependencies: PackageManagerDependencies = {
+            'typescript': '4.8.4',
+        }
+        await decompress(artifact, buildPath, {})
+        await packageManager.installProject(buildPath)
+        await packageManager.addDependencies(buildPath, dependencies)
+        await packageManager.runLocalDependency(buildPath, 'tsc index.ts')
         await fs.writeFile(`${buildPath}/_input.txt`, JSON.stringify(input))
         await fs.writeFile(`${buildPath}/code-executor.js`, codeExecutor)
 
